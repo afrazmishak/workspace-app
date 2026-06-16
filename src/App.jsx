@@ -23,6 +23,9 @@ function App() {
     ])
   );
 
+  const [taskSearch, setTaskSearch] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+
   const [newTask, setNewTask] = useState("");
   const [newTaskDate, setNewTaskDate] = useState(getToday());
 
@@ -45,6 +48,17 @@ function App() {
     { id: "done", title: "Done" },
   ];
 
+  const filteredTasks = tasks.filter((task) => {
+    const matchesSearch =
+      task.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
+      (task.description || "").toLowerCase().includes(taskSearch.toLowerCase());
+
+    const matchesPriority =
+      priorityFilter === "all" || task.priority === priorityFilter;
+
+    return matchesSearch && matchesPriority;
+  });
+
   useEffect(() => {
     saveData("workspace_tasks", tasks);
   }, [tasks]);
@@ -61,6 +75,7 @@ function App() {
     const task = {
       id: Date.now(),
       title: newTask,
+      description: "",
       status: "todo",
       dueDate: newTaskDate,
       priority: "medium"
@@ -162,6 +177,25 @@ function App() {
           <section>
             <h2>Board</h2>
 
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search tasks..."
+              value={taskSearch}
+              onChange={(e) => setTaskSearch(e.target.value)}
+            />
+
+            <select
+              className="filter-select"
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+            >
+              <option value="all">All priorities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+
             <div className="board">
               <div className="add-task">
                 <input type="text" placeholder="Enter task..." value={newTask} onChange={(e) => setNewTask(e.target.value)} />
@@ -175,15 +209,22 @@ function App() {
                 <div className="column" key={column.id}>
                   <h3>{column.title}</h3>
 
-                  {tasks
+                  {filteredTasks
                     .filter((task) => task.status === column.id)
                     .map((task) => (
                       <div className="task-card" key={task.id} onClick={() => setSelectedTask(task)}>
                         <span>{task.title}</span>
+
                         <p className="task-date">Due: {task.dueDate}</p>
+
+                        {task.description && (
+                          <p className="task-description">{task.description}</p>
+                        )}
+
                         <p className={`priority ${task.priority}`}>
                           {task.priority}
                         </p>
+
                         <button onClick={() => deleteTask(task.id)}>
                           Delete
                         </button>
@@ -325,6 +366,17 @@ function App() {
                   setSelectedTask({
                     ...selectedTask,
                     title: e.target.value,
+                  })
+                }
+              />
+
+              <textarea
+                placeholder="Task description..."
+                value={selectedTask.description || ""}
+                onChange={(e) =>
+                  setSelectedTask({
+                    ...selectedTask,
+                    description: e.target.value,
                   })
                 }
               />
