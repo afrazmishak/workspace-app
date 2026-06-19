@@ -17,14 +17,15 @@ function App() {
 
   const [tasks, setTasks] = useState(() =>
     loadData("workspace_tasks", [
-      { id: 1, title: "Sketch workspace layout", status: "todo" },
-      { id: 2, title: "Draft Q3 goals doc", status: "progress" },
-      { id: 3, title: "Review team notes", status: "done" },
+      { id: 1, title: "Sketch workspace layout", status: "todo", dueDate: "2026-06-20", priority: "medium" },
+      { id: 2, title: "Draft Q3 goals doc", status: "progress", dueDate: "2026-06-25", priority: "high" },
+      { id: 3, title: "Review team notes", status: "done", dueDate: "2026-06-18", priority: "low" },
     ])
   );
 
   const [taskSearch, setTaskSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("default");
 
   const [newTask, setNewTask] = useState("");
   const [newTaskDate, setNewTaskDate] = useState(getToday());
@@ -48,16 +49,24 @@ function App() {
     { id: "done", title: "Done" },
   ];
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
-      (task.description || "").toLowerCase().includes(taskSearch.toLowerCase());
+  const filteredTasks = tasks
+    .filter((task) => {
+      const matchesSearch =
+        task.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
+        (task.description || "").toLowerCase().includes(taskSearch.toLowerCase());
 
-    const matchesPriority =
-      priorityFilter === "all" || task.priority === priorityFilter;
+      const matchesPriority =
+        priorityFilter === "all" || task.priority === priorityFilter;
 
-    return matchesSearch && matchesPriority;
-  });
+      return matchesSearch && matchesPriority;
+    })
+    .sort((a, b) => {
+      if (sortBy === "dueDate") {
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      }
+
+      return 0;
+    });
 
   useEffect(() => {
     saveData("workspace_tasks", tasks);
@@ -194,6 +203,15 @@ function App() {
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
+            </select>
+
+            <select
+              className="filter-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="default">Default order</option>
+              <option value="dueDate">Sort by due date</option>
             </select>
 
             <div className="board">
