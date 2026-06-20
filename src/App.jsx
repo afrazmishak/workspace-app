@@ -42,6 +42,8 @@ function App() {
 
   const [noteTitle, setNoteTitle] = useState("");
   const [noteBody, setNoteBody] = useState("");
+  const [noteSearch, setNoteSearch] = useState("");
+  const [selectedNote, setSelectedNote] = useState(null)
 
   const columns = [
     { id: "todo", title: "To do" },
@@ -71,6 +73,16 @@ function App() {
   useEffect(() => {
     saveData("workspace_tasks", tasks);
   }, [tasks]);
+
+  const filteredNotes = notes.filter((note) =>
+    note.title.toLowerCase().includes(noteSearch.toLowerCase()) ||
+    note.body.toLowerCase().includes(noteSearch.toLowerCase())
+  );
+
+  const completedTasks = tasks.filter((task) => task.status === "done").length;
+
+  const completionPercent =
+    tasks.length === 0 ? 0 : Math.round((completedTasks / tasks.length) * 100);
 
   const [selectedTask, setSelectedTask] = useState(null);
 
@@ -125,6 +137,16 @@ function App() {
     setNotes(notes.filter((note) => note.id !== id));
   }
 
+  function updateNote(id, updatedNote) {
+    setNotes(
+      notes.map((note) =>
+        note.id === id ? updatedNote : note
+      )
+    )
+
+    setSelectedNote(null);
+  }
+
   function getToday() {
     return new Date().toISOString().slice(0, 10);
   }
@@ -175,6 +197,7 @@ function App() {
         </div>
 
         <nav className="tabs">
+          <button onClick={() => setView("dashboard")}>Dashboard</button>
           <button onClick={() => setView("board")}>Board</button>
           <button onClick={() => setView("notes")}>Notes</button>
           <button onClick={() => setView("calendar")}>Calendar</button>
@@ -182,6 +205,112 @@ function App() {
       </header>
 
       <main>
+        {view === "dashboard" && (
+          <section>
+            <h2>Dashboard</h2>
+
+            <div className="dashboard-grid">
+              <div className="stat-card">
+                <h3>Total Tasks</h3>
+                <p>{tasks.length}</p>
+              </div>
+
+              <div className="stat-card">
+                <h3>Completed</h3>
+                <p>{tasks.filter((task) => task.status === "done").length}</p>
+              </div>
+
+              <div
+                className="stat-card clickable"
+                onClick={() => {
+                  setView("calendar");
+                  setSelectedDate(getToday());
+                }}
+              >
+                <h3>Due Today</h3>
+                <p>{tasks.filter((task) => task.dueDate === getToday()).length}</p>
+              </div>
+
+              <div
+                className="stat-card clickable"
+                onClick={() => {
+                  setView("board");
+                  setPriorityFilter("high");
+                }}
+              >
+                <h3>High Priority</h3>
+                <p>{tasks.filter((task) => task.priority === "high").length}</p>
+              </div>
+
+              <div
+                className="stat-card clickable"
+                onClick={() => {
+                  setView("board");
+                  setSortBy("dueDate");
+                }}
+              >
+                <h3>Overdue</h3>
+                <p>
+                  {
+                    tasks.filter(
+                      (task) =>
+                        task.dueDate < getToday() &&
+                        task.status !== "done"
+                    ).length
+                  }
+                </p>
+              </div>
+
+              <div className="stat-card">
+                <h3>To Do</h3>
+                <p>
+                  {
+                    tasks.filter(
+                      (task) => task.status === "todo"
+                    ).length
+                  }
+                </p>
+              </div>
+
+              <div className="progress-box">
+                <h3>Task Completion</h3>
+
+                <p>{completionPercent}% completed</p>
+
+                <div className="progress-bar">
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${completionPercent}` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <h3>Upcoming Tasks</h3>
+            {tasks
+              .filter((task) => task.dueDate >= getToday() && task.status !== "done")
+              .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+              .slice(0, 5)
+              .map((task) => (
+                <div className="task-card" key={task.id}>
+                  <div>
+                    <span>{task.title}</span>
+                    <p className="task-date">Due: {task.dueDate}</p>
+                  </div>
+                </div>
+              ))
+            }
+
+            <h3>Recent Notes</h3>
+            {notes.slice(0, 5).map((note) => (
+              <div className="note-card" key={note.id}>
+                <h3>{note.title}</h3>
+                <p>{note.body}</p>
+              </div>
+            ))}
+          </section>
+        )}
+
         {view === "board" && (
           <section>
             <h2>Board</h2>
@@ -235,6 +364,12 @@ function App() {
 
                         <p className="task-date">Due: {task.dueDate}</p>
 
+                        {task.dueDate < getToday() && task.status !== "done" && (
+                          <p className="overdue-label">
+                            Overdue
+                          </p>
+                        )}
+
                         {task.description && (
                           <p className="task-description">{task.description}</p>
                         )}
@@ -264,6 +399,14 @@ function App() {
           <section>
             <h2>Notes</h2>
 
+            <input
+              className="search0-input"
+              type="text"
+              placeholder="Search notes..."
+              value={noteSearch}
+              onChange={(e) => setNoteSearch(e.target.value)}
+            />
+
             <div className="add-note">
               <input type="text" placeholder="Note title..." value={noteTitle}
                 onChange={(e) => setNoteTitle(e.target.value)}
@@ -276,12 +419,15 @@ function App() {
               <button onClick={addNote}>Add Note</button>
             </div>
 
-            {notes.map((note) => (
-              <div className="note-card" key={note.id}>
+            {filteredNotes.map((note) => (
+              <div className="note-card" key={note.id} onClick={() => setSelectedNote(note)}>
                 <div className="note-header">
                   <h3>{note.title}</h3>
 
-                  <button onClick={() => deleteNote(note.id)}>
+                  <button onClick={(e) => {
+                    e.stopPropagation();
+                    deleteNote(note.id);
+                  }}>
                     Delete
                   </button>
                 </div>
@@ -431,6 +577,42 @@ function App() {
               </button>
 
               <button onClick={() => setSelectedTask(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {selectedNote && (
+          <div className="modal-overlay">
+            <div className="modal">
+              <h2>Edit Note</h2>
+
+              <input
+                value={selectedNote.title}
+                onChange={(e) =>
+                  setSelectedNote({
+                    ...selectedNote,
+                    title: e.target.value,
+                  })
+                }
+              />
+
+              <textarea
+                value={selectedNote.body}
+                onChange={(e) =>
+                  setSelectedNote({
+                    ...selectedNote,
+                    body: e.target.value,
+                  })
+                }
+              />
+
+              <button onClick={() => updateNote(selectedNote.id, selectedNote)}>
+                Save
+              </button>
+
+              <button onClick={() => setSelectedNote(null)}>
                 Cancel
               </button>
             </div>
