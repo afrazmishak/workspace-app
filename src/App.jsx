@@ -188,6 +188,61 @@ function App() {
     setSelectedTask(null);
   }
 
+  function exportData() {
+    const workspaceData = {
+      tasks,
+      notes,
+      exportedAt: new Date().toISOString(),
+    };
+
+    const file = new Blob(
+      [JSON.stringify(workspaceData, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(file);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.document = "workspace-backup.json";
+    link.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+      const importedData = JSON.parse(e.target.result);
+
+      if (importedData.tasks && importedData.notes) {
+        setTasks(importedData.tasks);
+        setTasks(importedData.notes);
+      }
+    }
+
+    reader.readAsText(file);
+  }
+
+  function resetData() {
+    const confirmReset = window.confirm(
+      "Are you sure you want to reset all tasks and notes?"
+    );
+
+    if (!confirmReset) return;
+
+    localStorage.removeItem("workspace_tasks");
+    localStorage.removeItem("workspace_notes");
+
+    setTasks([]);
+    setNotes([]);
+  }
+
   return (
     <div className="app">
       <header className="header">
@@ -282,6 +337,42 @@ function App() {
                     className="progress-fill"
                     style={{ width: `${completionPercent}` }}
                   ></div>
+                </div>
+              </div>
+
+              <div className="quick-actions">
+                <h3>Quick Actions</h3>
+
+                <div className="quick-actions-grid">
+                  <button onClick={() => setView("board")}>
+                    Create Task
+                  </button>
+
+                  <button onClick={() => setView("notes")}>
+                    Create Note
+                  </button>
+
+                  <button onClick={() => setView("calendar")}>
+                    Open Calendar
+                  </button>
+
+                  <button onClick={exportData}>
+                    Export Data
+                  </button>
+
+                  <label className="import-button">
+                    Import Data
+                    <input
+                      type="file"
+                      accept="application/json"
+                      onChange={importData}
+                      hidden
+                    />
+                  </label>
+
+                  <button onClick={resetData}>
+  Reset Data
+</button>
                 </div>
               </div>
             </div>

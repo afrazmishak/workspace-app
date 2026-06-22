@@ -362,3 +362,35 @@ body {
   font-weight: bold;
   margin-top: 4px;
 }
+
+.quick-actions {
+  margin-top: 20px;
+  background: white;
+  border: 1px solid #e7e2d6;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.quick-actions-grid {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.quick-actions-grid button {
+  padding: 10px 16px;
+  border: none;
+  background: #3d5a4a;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.import-button {
+  padding: 10px 16px;
+  border: none;
+  background: #3d5a4a;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
