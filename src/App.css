@@ -68,6 +68,7 @@ body {
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 10px;
+  cursor: grab;
 }
 
 .add-task {
@@ -393,4 +394,39 @@ body {
   color: white;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.dark {
+  background: #1f1f1f;
+  color: white;
+  min-height: 100vh;
+}
+
+.dark .column,
+.dark .note-card,
+.dark .stat-card,
+.dark .calendar-box,
+.dark .progress-box,
+.dark .quick-actions,
+.dark .modal {
+  background: #2c2c2c;
+  color: white;
+  border-color: #444;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+}
+
+.dark .task-card {
+  background: #333;
+  border-color: #555;
+}
+
+.task-card:active {
+  cursor: grabbing;
 }

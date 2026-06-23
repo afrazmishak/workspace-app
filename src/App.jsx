@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/purity */
 import { useState, useEffect } from "react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import "./App.css";
 
 function loadData(key, fallback) {
@@ -88,6 +89,17 @@ function App() {
 
   const [selectedDate, setSelectedDate] = useState(getToday());
   const [calendarDate, setCalendarDate] = useState(new Date());
+
+  const [darkMode, setDarkMode] = useState(() =>
+    JSON.parse(localStorage.getItem("workspace_dark")) || false
+  );
+
+  useEffect(() => {
+    localStorage.setItem(
+      "workspace_dark",
+      JSON.stringify(darkMode)
+    );
+  }, [darkMode]);
 
   //FUNCTIONS
   function addTask() {
@@ -204,7 +216,7 @@ function App() {
 
     const link = document.createElement("a");
     link.href = url;
-    link.document = "workspace-backup.json";
+    link.download = "workspace-backup.json";
     link.click();
 
     URL.revokeObjectURL(url);
@@ -222,7 +234,7 @@ function App() {
 
       if (importedData.tasks && importedData.notes) {
         setTasks(importedData.tasks);
-        setTasks(importedData.notes);
+        setNotes(importedData.notes);
       }
     }
 
@@ -243,9 +255,45 @@ function App() {
     setNotes([]);
   }
 
+  function handleDragEnd(result) {
+    const { destination, draggableId } = result;
+
+    if (!destination) return;
+
+    const draggedTask = tasks.find(
+      (task) => task.id.toString() === draggableId
+    );
+
+    if (!draggedTask) return;
+
+    const updatedTask = {
+      ...draggedTask,
+      status: destination.droppableId,
+    };
+
+    const remainingTasks = tasks.filter(
+      (task) => task.id.toString() !== draggableId
+    );
+
+    const destinationTasks = remainingTasks.filter(
+      (task) => task.status === destination.droppableId
+    );
+
+    const otherTasks = remainingTasks.filter(
+      (task) => task.status !== destination.droppableId
+    );
+
+    destinationTasks.splice(destination.index, 0, updatedTask);
+
+    setTasks([...otherTasks, ...destinationTasks]);
+  }
+
   return (
-    <div className="app">
+    <div className={`app ${darkMode ? "dark" : ""}`}>
       <header className="header">
+        <button onClick={() => setDarkMode(!darkMode)}>
+          {darkMode ? "☀️ Light" : "🌙 Dark"}
+        </button>
         <div>
           <h1>Studio</h1>
           <p>Tasks, notes, and calendar in one workspace.</p>
@@ -335,7 +383,7 @@ function App() {
                 <div className="progress-bar">
                   <div
                     className="progress-fill"
-                    style={{ width: `${completionPercent}` }}
+                    style={{ width: `${completionPercent}%` }}
                   ></div>
                 </div>
               </div>
@@ -371,8 +419,8 @@ function App() {
                   </label>
 
                   <button onClick={resetData}>
-  Reset Data
-</button>
+                    Reset Data
+                  </button>
                 </div>
               </div>
             </div>
@@ -434,55 +482,86 @@ function App() {
               <option value="dueDate">Sort by due date</option>
             </select>
 
-            <div className="board">
-              <div className="add-task">
-                <input type="text" placeholder="Enter task..." value={newTask} onChange={(e) => setNewTask(e.target.value)} />
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="board">
+                <div className="add-task">
+                  <input type="text" placeholder="Enter task..." value={newTask} onChange={(e) => setNewTask(e.target.value)} />
 
-                <input type="date" value={newTaskDate} onChange={(e) => setNewTaskDate(e.target.value)} />
+                  <input type="date" value={newTaskDate} onChange={(e) => setNewTaskDate(e.target.value)} />
 
-                <button onClick={addTask}>Add Task</button>
-              </div>
-
-              {columns.map((column) => (
-                <div className="column" key={column.id}>
-                  <h3>{column.title}</h3>
-
-                  {filteredTasks
-                    .filter((task) => task.status === column.id)
-                    .map((task) => (
-                      <div className="task-card" key={task.id} onClick={() => setSelectedTask(task)}>
-                        <span>{task.title}</span>
-
-                        <p className="task-date">Due: {task.dueDate}</p>
-
-                        {task.dueDate < getToday() && task.status !== "done" && (
-                          <p className="overdue-label">
-                            Overdue
-                          </p>
-                        )}
-
-                        {task.description && (
-                          <p className="task-description">{task.description}</p>
-                        )}
-
-                        <p className={`priority ${task.priority}`}>
-                          {task.priority}
-                        </p>
-
-                        <button onClick={() => deleteTask(task.id)}>
-                          Delete
-                        </button>
-
-                        <select value={task.status} onChange={(e) => moveTask(task.id, e.target.value)}>
-                          <option value="todo">To do</option>
-                          <option value="progress">In progress</option>
-                          <option value="done">Done</option>
-                        </select>
-                      </div>
-                    ))}
+                  <button onClick={addTask}>Add Task</button>
                 </div>
-              ))}
-            </div>
+
+                {columns.map((column) => (
+                  <Droppable droppableId={column.id} key={column.id}>
+                    {(provided) => (
+                      <div
+                        className="column"
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                      >
+                        <h3>{column.title}</h3>
+
+                        {filteredTasks
+                          .filter((task) => task.status === column.id)
+                          .map((task, index) => (
+                            <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+                              {(provided) => (
+                                <div
+                                  className="task-card"
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  onClick={() => setSelectedTask(task)}
+                                >
+                                  <span>{task.title}</span>
+
+                                  <p className="task-date">Due: {task.dueDate}</p>
+
+                                  {task.dueDate < getToday() && task.status !== "done" && (
+                                    <p className="overdue-label">
+                                      Overdue
+                                    </p>
+                                  )}
+
+                                  {task.description && (
+                                    <p className="task-description">{task.description}</p>
+                                  )}
+
+                                  <p className={`priority ${task.priority}`}>
+                                    {task.priority}
+                                  </p>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteTask(task.id);
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+
+                                  <select
+                                    value={task.status}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => moveTask(task.id, e.target.value)}
+                                  >
+                                    <option value="todo">To do</option>
+                                    <option value="progress">In progress</option>
+                                    <option value="done">Done</option>
+                                  </select>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                ))}
+              </div>
+            </DragDropContext>
+
           </section>
         )}
 
@@ -491,7 +570,7 @@ function App() {
             <h2>Notes</h2>
 
             <input
-              className="search0-input"
+              className="search-input"
               type="text"
               placeholder="Search notes..."
               value={noteSearch}
