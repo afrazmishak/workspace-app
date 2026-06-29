@@ -1,20 +1,14 @@
 /* eslint-disable react-hooks/purity */
 import { useState, useEffect } from "react";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import Dashboard from "./components/Dashboard";
 import "./App.css";
 import TaskModal from "./components/TaskModal"
 import NoteModal from "./components/NoteModal";
 import CalendarView from "./components/CalendarView";
-
-function loadData(key, fallback) {
-  const savedData = localStorage.getItem(key);
-  return savedData ? JSON.parse(savedData) : fallback;
-}
-
-function saveData(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
-}
+import Notes from "./components/Notes";
+import Board from "./components/Board";
+import { loadData, saveData } from "./utils/storage";
+import { getToday, getMonthDays, formatDate } from "./utils/data";
 
 function App() {
   // STATES
@@ -163,37 +157,6 @@ function App() {
     setSelectedNote(null);
   }
 
-  function getToday() {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  function getMonthDays(date) {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-
-    const days = [];
-
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null);
-    }
-
-    for (let day = 1; day <= totalDays; day++) {
-      days.push(day);
-    }
-
-    return days;
-  }
-
-  function formatDate(year, month, day) {
-    const mm = String(month + 1).padStart(2, "0");
-    const dd = String(day).padStart(2, "0");
-
-    return `${year}-${mm}-${dd}`;
-  }
-
   function updateTask(id, updatedTask) {
     setTasks(
       tasks.map((task) =>
@@ -329,161 +292,41 @@ function App() {
         )}
 
         {view === "board" && (
-          <section>
-            <h2>Board</h2>
-
-            <input
-              className="search-input"
-              type="text"
-              placeholder="Search tasks..."
-              value={taskSearch}
-              onChange={(e) => setTaskSearch(e.target.value)}
-            />
-
-            <select
-              className="filter-select"
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-            >
-              <option value="all">All priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-
-            <select
-              className="filter-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="default">Default order</option>
-              <option value="dueDate">Sort by due date</option>
-            </select>
-
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="board">
-                <div className="add-task">
-                  <input type="text" placeholder="Enter task..." value={newTask} onChange={(e) => setNewTask(e.target.value)} />
-
-                  <input type="date" value={newTaskDate} onChange={(e) => setNewTaskDate(e.target.value)} />
-
-                  <button onClick={addTask}>Add Task</button>
-                </div>
-
-                {columns.map((column) => (
-                  <Droppable droppableId={column.id} key={column.id}>
-                    {(provided) => (
-                      <div
-                        className="column"
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                      >
-                        <h3>{column.title}</h3>
-
-                        {filteredTasks
-                          .filter((task) => task.status === column.id)
-                          .map((task, index) => (
-                            <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
-                              {(provided) => (
-                                <div
-                                  className="task-card"
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  onClick={() => setSelectedTask(task)}
-                                >
-                                  <span>{task.title}</span>
-
-                                  <p className="task-date">Due: {task.dueDate}</p>
-
-                                  {task.dueDate < getToday() && task.status !== "done" && (
-                                    <p className="overdue-label">
-                                      Overdue
-                                    </p>
-                                  )}
-
-                                  {task.description && (
-                                    <p className="task-description">{task.description}</p>
-                                  )}
-
-                                  <p className={`priority ${task.priority}`}>
-                                    {task.priority}
-                                  </p>
-
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      deleteTask(task.id);
-                                    }}
-                                  >
-                                    Delete
-                                  </button>
-
-                                  <select
-                                    value={task.status}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onChange={(e) => moveTask(task.id, e.target.value)}
-                                  >
-                                    <option value="todo">To do</option>
-                                    <option value="progress">In progress</option>
-                                    <option value="done">Done</option>
-                                  </select>
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                ))}
-              </div>
-            </DragDropContext>
-
-          </section>
+          <Board
+            taskSearch={taskSearch}
+            setTaskSearch={setTaskSearch}
+            priorityFilter={priorityFilter}
+            setPriorityFilter={setPriorityFilter}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            handleDragEnd={handleDragEnd}
+            newTask={newTask}
+            setNewTask={setNewTask}
+            newTaskDate={newTaskDate}
+            setNewTaskDate={setNewTaskDate}
+            addTask={addTask}
+            columns={columns}
+            filteredTasks={filteredTasks}
+            getToday={getToday}
+            setSelectedTask={setSelectedTask}
+            deleteTask={deleteTask}
+            moveTask={moveTask}
+          />
         )}
 
         {view === "notes" && (
-          <section>
-            <h2>Notes</h2>
-
-            <input
-              className="search-input"
-              type="text"
-              placeholder="Search notes..."
-              value={noteSearch}
-              onChange={(e) => setNoteSearch(e.target.value)}
-            />
-
-            <div className="add-note">
-              <input type="text" placeholder="Note title..." value={noteTitle}
-                onChange={(e) => setNoteTitle(e.target.value)}
-              />
-
-              <textarea placeholder="Write note..." value={noteBody}
-                onChange={(e) => setNoteBody(e.target.value)}
-              />
-
-              <button onClick={addNote}>Add Note</button>
-            </div>
-
-            {filteredNotes.map((note) => (
-              <div className="note-card" key={note.id} onClick={() => setSelectedNote(note)}>
-                <div className="note-header">
-                  <h3>{note.title}</h3>
-
-                  <button onClick={(e) => {
-                    e.stopPropagation();
-                    deleteNote(note.id);
-                  }}>
-                    Delete
-                  </button>
-                </div>
-
-                <p>{note.body}</p>
-              </div>
-            ))}
-          </section>
+          <Notes
+            noteSearch={noteSearch}
+            setNoteSearch={setNoteSearch}
+            noteTitle={noteTitle}
+            setNoteTitle={setNoteTitle}
+            noteBody={noteBody}
+            setNoteBody={setNoteBody}
+            addNote={addNote}
+            filteredNotes={filteredNotes}
+            setSelectedNote={setSelectedNote}
+            deleteNote={deleteNote}
+          />
         )}
 
         {view === "calendar" && (
