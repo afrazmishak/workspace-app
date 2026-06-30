@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import Dashboard from "./components/Dashboard";
 import "./App.css";
+import TaskModal from "./components/TaskModal"
+import NoteModal from "./components/NoteModal";
+import CalendarView from "./components/CalendarView";
 
 function loadData(key, fallback) {
   const savedData = localStorage.getItem(key);
@@ -311,17 +314,17 @@ function App() {
       <main>
         {view === "dashboard" && (
           <Dashboard
-          tasks={tasks} 
-          notes={notes}
-          getToday={getToday}
-          completionPercent={completionPercent}
-          setView={setView}
-          setSelectedDate={setSelectedDate}
-          setPriorityFilter={setPriorityFilter}
-          setSortBy={setSortBy}
-          exportData={exportData}
-          importData={importData}
-          resetData={resetData}
+            tasks={tasks}
+            notes={notes}
+            getToday={getToday}
+            completionPercent={completionPercent}
+            setView={setView}
+            setSelectedDate={setSelectedDate}
+            setPriorityFilter={setPriorityFilter}
+            setSortBy={setSortBy}
+            exportData={exportData}
+            importData={importData}
+            resetData={resetData}
           />
         )}
 
@@ -484,185 +487,27 @@ function App() {
         )}
 
         {view === "calendar" && (
-          <section>
-            <h2>Calendar</h2>
-
-            <div className="calendar-box">
-              <div className="calendar-header">
-                <button onClick={() => setCalendarDate(
-                  new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1)
-                )}>Previous</button>
-
-                <h3>
-                  {calendarDate.toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric"
-                  })}
-                </h3>
-
-                <button onClick={() => setCalendarDate(
-                  new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1)
-                )}>Next</button>
-              </div>
-
-              <div className="calendar-weekdays">
-                <span>Sun</span>
-                <span>Mon</span>
-                <span>Tue</span>
-                <span>Wed</span>
-                <span>Thu</span>
-                <span>Fri</span>
-                <span>Sat</span>
-              </div>
-
-              <div className="calendar-grid">
-                {getMonthDays(calendarDate).map((day, index) => {
-                  if (day === null) {
-                    return <div className="calendar-day empty" key={index}></div>
-                  }
-
-                  const dateString = formatDate(
-                    calendarDate.getFullYear(),
-                    calendarDate.getMonth(),
-                    day
-                  );
-
-                  const dueTasks = tasks.filter((task) => task.dueDate === dateString);
-
-                  return (
-                    <button className={`calendar-day ${selectedDate === dateString ? "selected-day" : ""
-                      }`}
-                      key={index}
-                      onClick={() => setSelectedDate(dateString)}
-                    >
-                      <strong>{day}</strong>
-
-                      {dueTasks.length > 0 && (
-                        <small>{dueTasks.length} task</small>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="selected-date-panel">
-                <h3>Tasks due on {selectedDate}</h3>
-
-                {tasks.filter((task) => task.dueDate === selectedDate).length === 0 ? (
-                  <p>No tasks for this date.</p>
-                ) : (
-                  tasks
-                    .filter((task) => task.dueDate === selectedDate)
-                    .map((task) => (
-                      <div className="task-card" key={task.id}>
-                        {task.title}
-                      </div>
-                    ))
-                )}
-              </div>
-            </div>
-          </section>
+          <CalendarView
+            tasks={tasks}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            calendarDate={calendarDate}
+            setCalendarDate={setCalendarDate}
+            getMonthDays={getMonthDays}
+            formatDate={formatDate}
+          />
         )}
 
-        {selectedTask && (
-          <div className="modal-overlay">
-            <div className="modal">
-              <h2>Edit Task</h2>
-
-              <input
-                value={selectedTask.title}
-                onChange={(e) =>
-                  setSelectedTask({
-                    ...selectedTask,
-                    title: e.target.value,
-                  })
-                }
-              />
-
-              <textarea
-                placeholder="Task description..."
-                value={selectedTask.description || ""}
-                onChange={(e) =>
-                  setSelectedTask({
-                    ...selectedTask,
-                    description: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                type="date"
-                value={selectedTask.dueDate}
-                onChange={(e) =>
-                  setSelectedTask({
-                    ...selectedTask,
-                    dueDate: e.target.value,
-                  })
-                }
-              />
-
-              <select value={selectedTask.priority || "medium"}
-                onChange={(e) =>
-                  setSelectedTask({
-                    ...selectedTask,
-                    priority: e.target.value,
-                  })
-                }>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-
-              <button
-                onClick={() =>
-                  updateTask(selectedTask.id, selectedTask)
-                }
-              >
-                Save
-              </button>
-
-              <button onClick={() => setSelectedTask(null)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {selectedNote && (
-          <div className="modal-overlay">
-            <div className="modal">
-              <h2>Edit Note</h2>
-
-              <input
-                value={selectedNote.title}
-                onChange={(e) =>
-                  setSelectedNote({
-                    ...selectedNote,
-                    title: e.target.value,
-                  })
-                }
-              />
-
-              <textarea
-                value={selectedNote.body}
-                onChange={(e) =>
-                  setSelectedNote({
-                    ...selectedNote,
-                    body: e.target.value,
-                  })
-                }
-              />
-
-              <button onClick={() => updateNote(selectedNote.id, selectedNote)}>
-                Save
-              </button>
-
-              <button onClick={() => setSelectedNote(null)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        <TaskModal
+          selectedTask={selectedTask}
+          setSelectedTask={setSelectedTask}
+          updateTask={updateTask}
+        />
+        <NoteModal
+          selectedNote={selectedNote}
+          setSelectedNote={setSelectedNote}
+          updateNote={updateNote}
+        />
       </main>
     </div>
   );
